@@ -24,7 +24,7 @@ import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name="DoubleShotEspresso", group="CommandOpMode")
 //@Disabled
-public class CommandDrive extends CommandOpMode {
+public class CMDBased_Drive extends CommandOpMode {
 
     public DcMotor  driveOne = null;
     public DcMotor  driveTwo = null;

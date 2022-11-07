@@ -31,9 +31,10 @@ package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
 import android.view.View;
+
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -49,9 +50,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import java.util.Locale;
 
 
-@TeleOp(name="AutonomousTEEHEE", group="Iterative Opmode")
+@Autonomous(name="AutonomousTEEHEE", group="Iterative Opmode")
 @Disabled
-public class AutonomousTEEHEE extends LinearOpMode {
+public class Autonomous_PID extends LinearOpMode {
 
     BNO055IMU imu;
 
@@ -60,6 +61,7 @@ public class AutonomousTEEHEE extends LinearOpMode {
     /* Declare OpMode members. */
     private ElapsedTime runtime=new ElapsedTime();
     public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(25,0.05,1.25,0);
+    PIDFCoefficients pidOrig, currentPID;
 
     static final double COUNTS_PER_MOTOR_REV=746.6;    //
     static final double WHEEL_DIAMETER_INCHES=4.0;     // For figuring circumference
@@ -70,6 +72,7 @@ public class AutonomousTEEHEE extends LinearOpMode {
     private DcMotorEx rightDrive1=null;
     private DcMotorEx leftDrive2=null;
     private DcMotorEx rightDrive2=null;
+
 
     static final double HEADING_THRESHOLD=1;      // As tight as we can make it with an integer gyro
     static final double P_TURN_COEFF=0.025;     // Larger is more responsive, but also less stable
@@ -120,6 +123,8 @@ public class AutonomousTEEHEE extends LinearOpMode {
         leftDrive2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER,DrivetrainPID);
         rightDrive1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER,DrivetrainPID);
         rightDrive2.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER,DrivetrainPID);
+
+        currentPID = leftDrive1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
 
         waitForStart();
 
