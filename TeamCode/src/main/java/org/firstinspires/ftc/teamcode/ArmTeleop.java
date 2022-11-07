@@ -33,6 +33,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
@@ -55,17 +56,20 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Teleop2021", group="Iterative Opmode")
+@TeleOp(name="ArmTeleop", group="Iterative Opmode")
 //@Disabled
-public class Teleop2021 extends LinearOpMode {
+public class ArmTeleop extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
 
-    // Drive Train
     private DcMotor left1 = null;
     private DcMotor right1 = null;
     private DcMotor left2 = null;
     private DcMotor right2 = null;
+
+    private DcMotor arm = null;
+
+
 
 
     //Gyro Setup
@@ -85,11 +89,15 @@ public class Teleop2021 extends LinearOpMode {
         right1 = hardwareMap.get(DcMotor.class, "right1");
         left2 = hardwareMap.get(DcMotor.class, "left2");
         right2 = hardwareMap.get(DcMotor.class, "right2");
+        arm = hardwareMap.get(DcMotor.class,"arm");
+
 
         left1.setDirection(DcMotor.Direction.FORWARD);
         right2.setDirection(DcMotor.Direction.REVERSE);
         left2.setDirection(DcMotor.Direction.FORWARD);
         right1.setDirection(DcMotor.Direction.REVERSE);
+        arm.setDirection(DcMotor.Direction.FORWARD);
+
 
         //Gyro
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
@@ -134,8 +142,31 @@ public class Teleop2021 extends LinearOpMode {
                 angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
             }
 
+            //arm code
+            if (gamepad1.left_stick_button) {
+                pressed = true;
+                LiftArm();
+            }
+            else if (gamepad1.right_stick_button) {
+                pressed = true;
+                LowerArm();
+            } else{
+
+            }
+
+
         }
     }
+
+    private void LiftArm() {
+        arm.setPower(0.5);
+    }
+
+    private void LowerArm() {
+        arm.setPower(-0.5);
+    }
+
+
 
     //Movement
     private void StrafeLeft(double angle) {
