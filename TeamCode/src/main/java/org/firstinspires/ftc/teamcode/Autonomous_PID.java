@@ -50,7 +50,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import java.util.Locale;
 
 
-@Autonomous(name="AutonomousTEEHEE", group="Iterative Opmode")
+@Autonomous(name="Autonomous_PID", group="Iterative Opmode")
 @Disabled
 public class Autonomous_PID extends LinearOpMode {
 

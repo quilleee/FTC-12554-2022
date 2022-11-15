@@ -60,10 +60,6 @@ public class StolenLift_PID extends LinearOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor lift = null;
 
-    //Gyro Setup
-    BNO055IMU imu;
-    Orientation angles;
-
     //Other setup
     boolean pressed;
     public static double kp = 0.02;
@@ -91,11 +87,11 @@ public class StolenLift_PID extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            if (gamepad1.a){
+            if (gamepad1.left_bumper){
                 moveLift(Position1);
-            } else if (gamepad1.b){
+            } else if (gamepad1.right_bumper){
                 moveLift(Position2);
-            } else if (gamepad1.x){
+            } else if (gamepad1.dpad_left){
                 moveLift(Position3);
             } else{}
 

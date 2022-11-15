@@ -30,6 +30,7 @@
 package org.firstinspires.ftc.teamcode;
 
 //import com.acmerobotics.dashboard.FtcDashboard;
+import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -49,9 +50,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Cardbob_Drive", group="Iterative Opmode")
+@TeleOp(name="FieldCentric_Drive", group="Iterative Opmode")
 //@Disabled
-public class Cardbob_Drive extends LinearOpMode {
+public class FieldCentric_Drive extends LinearOpMode {
 
     //FtcDashboard dashboard;
 
@@ -66,7 +67,7 @@ public class Cardbob_Drive extends LinearOpMode {
     boolean pressed;
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException{
 
         //Drive Train
         left1 = hardwareMap.get(DcMotor.class, "left1");
@@ -79,16 +80,46 @@ public class Cardbob_Drive extends LinearOpMode {
         left2.setDirection(DcMotor.Direction.FORWARD);
         right1.setDirection(DcMotor.Direction.REVERSE);
 
-
-        //Gyro?
+        // Retrieve the IMU from the hardware map
+        BNO055IMU imu = hardwareMap.get(BNO055IMU.class, "imu");
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        // Technically this is the default, however specifying it is clearer
+        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
+        // Without this, data retrieving from the IMU throws an exception
+        imu.initialize(parameters);
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
         waitForStart();
 
+        if (isStopRequested()) return;
+
         while (opModeIsActive()) {
 
+            double y = -gamepad1.left_stick_y; // Remember this is reversed!
+            double x = gamepad1.left_stick_x * 1.1; //Counteract imperfect strafing
+            double rx = gamepad1.right_stick_x;
+
+            // Read inverse IMU heading, as the IMU heading is CW positive.
+            double botHeading = -imu.getAngularOrientation().firstAngle;
+
+            double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+            double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
+
+            double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
+            double frontLeftPower = (rotY + rotX + rx) / denominator;
+            double backLeftPower = (rotY - rotX + rx) / denominator;
+            double frontRightPower = (rotY - rotX - rx) / denominator;
+            double backRightPower = (rotY + rotX - rx) / denominator;
+
+            left1.setPower(frontLeftPower);
+            left2.setPower(backLeftPower);
+            right1.setPower(frontRightPower);
+            right2.setPower(backRightPower);
+
+
             //Drive Train
+            /*
             double drive = -gamepad1.left_stick_y;
             double turn = gamepad1.left_stick_x;
             double strafe = gamepad1.right_stick_x;
@@ -103,6 +134,7 @@ public class Cardbob_Drive extends LinearOpMode {
             left2.setPower(left2drive);
             right1.setPower(right1drive);
             right2.setPower(right2drive);
+             */
 
 
 

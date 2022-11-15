@@ -55,7 +55,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Teleop2021", group="Iterative Opmode")
+@TeleOp(name="SquirtleSquad_Teleop", group="Iterative Opmode")
 //@Disabled
 public class SquirtleSquad_Teleop extends LinearOpMode {
 
