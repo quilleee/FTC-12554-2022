@@ -31,41 +31,37 @@ package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
 import android.view.View;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.util.Range;
-
-import org.firstinspires.ftc.robotcore.external.Func;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-import java.util.Locale;
 
-
-@Autonomous(name="Autonomous_PID", group="Iterative Opmode")
-@Disabled
+@Autonomous(name="Autonomous_PID2", group="Iterative Opmode")
+//@Disabled
 public class Autonomous_PID2 extends LinearOpMode {
 
     BNO055IMU imu;
     Orientation angles;
 
-    /* Declare OpMode members. */
+    // Declare OpMode members.
     private ElapsedTime runtime=new ElapsedTime();
     public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(25,0.05,1.25,0);
-    PIDFCoefficients pidOrig, currentPID;
 
-    static final double COUNTS_PER_MOTOR_REV = 28;
-    static final double DRIVE_GEAR_REDUCTION = 27.3529;
-    static final double WHEEL_DIAMETER_MM = 96;
+    // Calculating
+    static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
+    static final double DRIVE_GEAR_REDUCTION = 27.3529; // 5.23^2 (Ratio of gear box 5.23:1)
+    static final double WHEEL_DIAMETER_MM = 96; //goBILDA 96mm Mecanum Wheel
     static final double COUNTS_PER_MM = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                         (WHEEL_DIAMETER_MM * 3.1415);
 
@@ -81,42 +77,55 @@ public class Autonomous_PID2 extends LinearOpMode {
         left1=hardwareMap.get(DcMotorEx.class,"left1"); //motor 0
         right1=hardwareMap.get(DcMotorEx.class,"right1"); //motor 0
         left2=hardwareMap.get(DcMotorEx.class,"left2"); //motor 0
-        right2=hardwareMap.get(DcMotorEx.class,"right2"); //motor 0
+        right2=hardwareMap.get(DcMotorEx.class,"right2");
 
-        left1.setDirection(DcMotor.Direction.FORWARD);
-        right1.setDirection(DcMotor.Direction.REVERSE);
-        left2.setDirection(DcMotor.Direction.FORWARD);
-        right2.setDirection(DcMotor.Direction.REVERSE);
+        left1.setDirection(DcMotor.Direction.REVERSE);
+        right1.setDirection(DcMotor.Direction.FORWARD);
+        left2.setDirection(DcMotor.Direction.REVERSE);
+        right2.setDirection(DcMotor.Direction.FORWARD);
+
+        resetEncoders();
+
+        telemetry.addData(">","Robot Ready.");    //
+        telemetry.update();
 
         left1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         left2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
-        pidOrig = left1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
-
         left1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         left2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
 
-        currentPID = left1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER);
+        int relativeLayoutId=hardwareMap.appContext.getResources().getIdentifier("RelativeLayout","id",hardwareMap.appContext.getPackageName());
+        final View relativeLayout=((Activity)hardwareMap.appContext).findViewById(relativeLayoutId);
+
+        BNO055IMU.Parameters parameters=new BNO055IMU.Parameters();
+        parameters.angleUnit=BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit=BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile="BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled=true;
+        parameters.loggingTag="IMU";
+        parameters.accelerationIntegrationAlgorithm=new JustLoggingAccelerationIntegrator();
+
+        imu=hardwareMap.get(BNO055IMU.class,"imu");
+        imu.initialize(parameters);
 
         waitForStart();
 
-        simpleDrive(0.2, 500);
+        gyroDrive(0.2, 500);
+
+        telemetry.update();
 
     }
 
-    public void simpleDrive(double speed, double distance){
+    public void gyroDrive(double maxSpeed, double distance){
 
         resetEncoders();
 
-        double error;
-
-        int target = (int) (distance * COUNTS_PER_MM);
-
-        error = target - getCurrentPosition();
+        int target =(int)(distance * COUNTS_PER_MM);
 
         left1.setTargetPosition(target);
         left2.setTargetPosition(target);
@@ -128,20 +137,65 @@ public class Autonomous_PID2 extends LinearOpMode {
         right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
+        double p;
+        double kp = 0.1;
+        //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
 
-            error = target - getCurrentPosition();
-            left1.setPower(1);
-            left2.setPower(1);
-            right1.setPower(1);
-            right2.setPower(1);
+        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
+            // add telemetry
+            double angle_error = 0 - getRawHeading(); // find angle error
+            p = angle_error*kp; // calculate correction
+
+            double leftPower = maxSpeed + p; // change power based off angle error
+            double rightPower = maxSpeed - p;
+
+            left1.setPower(leftPower);
+            left2.setPower(leftPower);
+            right1.setPower(rightPower);
+            right2.setPower(rightPower);
 
         }
         stopMotors();
 
-        while (opModeIsActive() || error > 0){
-            error = target - getCurrentPosition();
+    }
+
+    public void gyroStrafe(double maxSpeed, double distance){
+
+        resetEncoders();
+
+        int target =(int)(distance * COUNTS_PER_MM);
+
+        left1.setTargetPosition(target);
+        left2.setTargetPosition(target);
+        right1.setTargetPosition(target);
+        right2.setTargetPosition(target);
+
+        left1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        left2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        double p;
+        double kp = 0.1;
+        //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
+
+        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
+            // add telemetry
+            double angle_error = 0 - getRawHeading(); // find angle error
+            p = angle_error*kp; // calculate correction
+
+            double left1Power = maxSpeed + p; // change power based off angle error
+            double left2Power = -maxSpeed - p;
+            double right1Power = maxSpeed + p;
+            double right2Power = -maxSpeed - p;
+
+            left1.setPower(left1Power);
+            left2.setPower(left2Power);
+            right1.setPower(right1Power);
+            right2.setPower(right2Power);
+
         }
+        stopMotors();
 
     }
 
@@ -161,6 +215,11 @@ public class Autonomous_PID2 extends LinearOpMode {
         left2.setPower(0);
         right1.setPower(0);
         right2.setPower(0);
+    }
+
+    public double getRawHeading() {
+        Orientation angles   = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        return angles.firstAngle;
     }
 
 
