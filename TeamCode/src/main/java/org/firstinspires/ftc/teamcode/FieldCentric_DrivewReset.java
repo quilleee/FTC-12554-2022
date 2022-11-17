@@ -29,12 +29,13 @@
 
 package org.firstinspires.ftc.teamcode;
 
-//import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
+
+import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -50,11 +51,15 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="FieldCentric_Drive", group="Iterative Opmode")
+@TeleOp(name="FieldCentric_DriveReset", group="Iterative Opmode")
 //@Disabled
-public class FieldCentric_Drive extends LinearOpMode {
+public class FieldCentric_DrivewReset extends LinearOpMode {
 
     //FtcDashboard dashboard;
+
+    BNO055IMU imu;
+
+    Orientation angles;
 
     private ElapsedTime runtime = new ElapsedTime();
 
@@ -62,6 +67,10 @@ public class FieldCentric_Drive extends LinearOpMode {
     private DcMotor right1 = null;
     private DcMotor left2 = null;
     private DcMotor right2 = null;
+
+    double Offset;
+    double newHeading;
+    double botHeading;
 
     //Other setup
     boolean pressed;
@@ -81,7 +90,7 @@ public class FieldCentric_Drive extends LinearOpMode {
         right1.setDirection(DcMotor.Direction.FORWARD); //reverse
 
         // Retrieve the IMU from the hardware map
-        BNO055IMU imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         // Technically this is the default, however specifying it is clearer
         parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
@@ -97,12 +106,12 @@ public class FieldCentric_Drive extends LinearOpMode {
         while (opModeIsActive()) {
 
             //double y = -gamepad1.left_stick_y; // Remember this is reversed!
-            double y = -gamepad1.left_stick_y;
-            double x = gamepad1.left_stick_x * 1.1; //Counteract imperfect strafing
+            double y = gamepad1.left_stick_y;
+            double x = -gamepad1.left_stick_x * 1.1; //Counteract imperfect strafing
             double rx = -gamepad1.right_stick_x;
 
             // Read inverse IMU heading, as the IMU heading is CW positive.
-            double botHeading = -imu.getAngularOrientation().firstAngle;
+            double botHeading = getHeading();
 
             double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
             double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
@@ -118,7 +127,31 @@ public class FieldCentric_Drive extends LinearOpMode {
             right1.setPower(frontRightPower);
             right2.setPower(backRightPower);
 
+            if (gamepad1.x){
+                getHeading();
+                resetHeading();
+            }
+
+            telemetry.addData("Angle", getHeading());
+            telemetry.update();
+
+
 
         }
+
     }
+
+
+    public void resetHeading(){
+
+        Offset = imu.getAngularOrientation().firstAngle;
+
+    }
+    public double getHeading(){
+
+        botHeading = -imu.getAngularOrientation().firstAngle + Offset;
+        return botHeading;
+    }
+
+
 }

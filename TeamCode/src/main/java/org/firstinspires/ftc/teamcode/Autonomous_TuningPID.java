@@ -33,6 +33,7 @@ import android.app.Activity;
 import android.view.View;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -42,15 +43,16 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-
-@Autonomous(name="Autonomous_PIDGyro", group="Iterative Opmode")
+@Config
+@Autonomous(name="Autonomous_TuningPID", group="Iterative Opmode")
 //@Disabled
-public class Autonomous_PID2 extends LinearOpMode {
+public class Autonomous_TuningPID extends LinearOpMode {
 
     /**
      * ---------------------------- FTC DASHBOARD ------------------------------------
@@ -67,7 +69,9 @@ public class Autonomous_PID2 extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime=new ElapsedTime();
-    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(25,0.05,1.25,0);
+
+    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(10,0,0,0);
+    public static int target = 50;
 
     // Calculating
     static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
@@ -84,6 +88,9 @@ public class Autonomous_PID2 extends LinearOpMode {
 
     @Override
     public void runOpMode(){
+
+        dashboard = FtcDashboard.getInstance();
+        Telemetry dashboardTelemetry = dashboard.getTelemetry();
 
         left1=hardwareMap.get(DcMotorEx.class,"left1"); //motor 0
         right1=hardwareMap.get(DcMotorEx.class,"right1"); //motor 0
@@ -125,6 +132,9 @@ public class Autonomous_PID2 extends LinearOpMode {
         imu.initialize(parameters);
 
         waitForStart();
+        while(opModeIsActive()){
+            print(dashboardTelemetry);
+        }
 
         gyroDrive(0.2, 500);
 
@@ -136,8 +146,6 @@ public class Autonomous_PID2 extends LinearOpMode {
 
         resetEncoders();
 
-        int target =(int)(distance * COUNTS_PER_MM);
-
         left1.setTargetPosition(target);
         left2.setTargetPosition(target);
         right1.setTargetPosition(target);
@@ -148,63 +156,18 @@ public class Autonomous_PID2 extends LinearOpMode {
         right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        double p;
-        double kp = 0.1;
         //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
 
         while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
             // add telemetry
-            double angle_error = 0 - angles.firstAngle; // find angle error
-            p = angle_error * kp; // calculate correction
 
-            double leftPower = maxSpeed + p; // change power based off angle error
-            double rightPower = maxSpeed - p;
+            double leftPower = maxSpeed; // change power based off angle error
+            double rightPower = maxSpeed;
 
             left1.setPower(leftPower);
             left2.setPower(leftPower);
             right1.setPower(rightPower);
             right2.setPower(rightPower);
-
-        }
-        stopMotors();
-
-    }
-
-    public void gyroStrafe(double maxSpeed, double distance){
-
-        resetEncoders();
-
-        int target =(int)(distance * COUNTS_PER_MM);
-
-        left1.setTargetPosition(target);
-        left2.setTargetPosition(target);
-        right1.setTargetPosition(target);
-        right2.setTargetPosition(target);
-
-        left1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        left2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        double kp = 0.1;
-        //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
-
-        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
-            // add telemetry
-            double angle_error = 0 - angles.firstAngle; // find angle error
-            double p = angle_error * kp; // calculate correction
-            // if error positive, right pos, left neg
-            // if error negative, right neg, left pos??
-
-            double left1Power = maxSpeed + p; // change power based off angle error
-            double left2Power = -maxSpeed - p;
-            double right1Power = maxSpeed + p;
-            double right2Power = -maxSpeed - p;
-
-            left1.setPower(left1Power);
-            left2.setPower(left2Power);
-            right1.setPower(right1Power);
-            right2.setPower(right2Power);
 
         }
         stopMotors();
@@ -232,6 +195,14 @@ public class Autonomous_PID2 extends LinearOpMode {
     public double getRawHeading() {
         Orientation angles   = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         return angles.firstAngle;
+    }
+
+    public void print(Telemetry dashboardTelemetry){
+
+        dashboardTelemetry.addData("Target", target);
+        dashboardTelemetry.addData("PIDCoefficients", DrivetrainPID);
+        dashboardTelemetry.update();
+
     }
 
 
