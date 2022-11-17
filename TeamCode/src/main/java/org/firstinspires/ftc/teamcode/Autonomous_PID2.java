@@ -51,6 +51,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 //@Disabled
 public class Autonomous_PID2 extends LinearOpMode {
 
+    // Gyro stuff
     BNO055IMU imu;
     Orientation angles;
 
@@ -58,7 +59,7 @@ public class Autonomous_PID2 extends LinearOpMode {
     private ElapsedTime runtime=new ElapsedTime();
     public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(25,0.05,1.25,0);
 
-    // Calculating
+    // Calculating how many counts are made every millimeter.
     static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
     static final double DRIVE_GEAR_REDUCTION = 27.3529; // 5.23^2 (Ratio of gear box 5.23:1)
     static final double WHEEL_DIAMETER_MM = 96; //goBILDA 96mm Mecanum Wheel
@@ -74,9 +75,9 @@ public class Autonomous_PID2 extends LinearOpMode {
     @Override
     public void runOpMode(){
 
-        left1=hardwareMap.get(DcMotorEx.class,"left1"); //motor 0
-        right1=hardwareMap.get(DcMotorEx.class,"right1"); //motor 0
-        left2=hardwareMap.get(DcMotorEx.class,"left2"); //motor 0
+        left1=hardwareMap.get(DcMotorEx.class,"left1");
+        right1=hardwareMap.get(DcMotorEx.class,"right1");
+        left2=hardwareMap.get(DcMotorEx.class,"left2");
         right2=hardwareMap.get(DcMotorEx.class,"right2");
 
         left1.setDirection(DcMotor.Direction.REVERSE);
@@ -86,7 +87,7 @@ public class Autonomous_PID2 extends LinearOpMode {
 
         resetEncoders();
 
-        telemetry.addData(">","Robot Ready.");    //
+        telemetry.addData(">","Robot Ready.");
         telemetry.update();
 
         left1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
@@ -185,7 +186,7 @@ public class Autonomous_PID2 extends LinearOpMode {
             p = angle_error*kp; // calculate correction
 
             double left1Power = maxSpeed + p; // change power based off angle error
-            double left2Power = -maxSpeed - p;
+            double left2Power = -maxSpeed - p; // left1 and left2, right1 and right2 are different
             double right1Power = maxSpeed + p;
             double right2Power = -maxSpeed - p;
 
