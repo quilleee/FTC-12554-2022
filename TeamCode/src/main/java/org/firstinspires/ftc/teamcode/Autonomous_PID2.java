@@ -46,10 +46,14 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
+//import com.acmerobotics.dashboard.FtcDashboard;
+
+
 
 @Autonomous(name="Autonomous_PID2", group="Iterative Opmode")
 //@Disabled
 public class Autonomous_PID2 extends LinearOpMode {
+
 
     // Gyro stuff
     BNO055IMU imu;
@@ -57,6 +61,9 @@ public class Autonomous_PID2 extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime=new ElapsedTime();
+    // p: too small will undershoot, too big will overshoot (should first overshoot a little for derivative)
+    // i:
+    // d:
     public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(25,0.05,1.25,0);
 
     // Calculating how many counts are made every millimeter.
