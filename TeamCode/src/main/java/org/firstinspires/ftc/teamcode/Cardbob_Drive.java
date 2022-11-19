@@ -49,7 +49,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="Cardbob_Teleop", group="Iterative Opmode")
+@TeleOp(name="Cardbob_Drive", group="Iterative Opmode")
 //@Disabled
 public class Cardbob_Drive extends LinearOpMode {
 
