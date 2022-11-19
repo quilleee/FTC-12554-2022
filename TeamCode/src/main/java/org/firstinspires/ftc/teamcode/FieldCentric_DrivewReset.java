@@ -34,28 +34,12 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-/**
- * This file contains an example of an iterative (Non-Linear) "OpMode".
- * An OpMode is a 'program' that runs in either the autonomous or the teleop period of an FTC match.
- * The names of OpModes appear on the menu of the FTC Driver Station.
- * When a selection is made from the menu, the corresponding OpMode
- * class is instantiated on the Robot Controller and executed.
- *
- * This particular OpMode just executes a basic Tank Drive Teleop for a two wheeled robot
- * It includes all the skeletal structure that all iterative OpModes contain.
- *
- * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
- * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
- */
 
 @TeleOp(name="FieldCentric_DriveReset", group="Iterative Opmode")
 //@Disabled
 public class FieldCentric_DrivewReset extends LinearOpMode {
-
-    //FtcDashboard dashboard;
 
     BNO055IMU imu;
 
@@ -69,7 +53,6 @@ public class FieldCentric_DrivewReset extends LinearOpMode {
     private DcMotor right2 = null;
 
     double Offset;
-    double newHeading;
     double botHeading;
 
     //Other setup
@@ -84,10 +67,10 @@ public class FieldCentric_DrivewReset extends LinearOpMode {
         left2 = hardwareMap.get(DcMotor.class, "left2");
         right2 = hardwareMap.get(DcMotor.class, "right2");
 
-        left1.setDirection(DcMotor.Direction.REVERSE); //forward
-        right2.setDirection(DcMotor.Direction.FORWARD); //reverse
-        left2.setDirection(DcMotor.Direction.REVERSE); //forward
-        right1.setDirection(DcMotor.Direction.FORWARD); //reverse
+        left1.setDirection(DcMotor.Direction.REVERSE);
+        right2.setDirection(DcMotor.Direction.FORWARD);
+        left2.setDirection(DcMotor.Direction.REVERSE);
+        right1.setDirection(DcMotor.Direction.FORWARD);
 
         // Retrieve the IMU from the hardware map
         imu = hardwareMap.get(BNO055IMU.class, "imu");
@@ -105,7 +88,6 @@ public class FieldCentric_DrivewReset extends LinearOpMode {
 
         while (opModeIsActive()) {
 
-            //double y = -gamepad1.left_stick_y; // Remember this is reversed!
             double y = gamepad1.left_stick_y;
             double x = -gamepad1.left_stick_x * 1.1; //Counteract imperfect strafing
             double rx = -gamepad1.right_stick_x;

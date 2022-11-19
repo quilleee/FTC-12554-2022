@@ -49,10 +49,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-@Config
-@Autonomous(name="Autonomous_TuningPID", group="Iterative Opmode")
+//@Config
+@Autonomous(name="Autonomous_TuningPIDwoDashboard", group="Iterative Opmode")
 //@Disabled
-public class Autonomous_TuningPID extends LinearOpMode {
+public class Autonomous_TuningPIDwoDashboard extends LinearOpMode {
 
     /**
      * ---------------------------- FTC DASHBOARD ------------------------------------
@@ -62,7 +62,7 @@ public class Autonomous_TuningPID extends LinearOpMode {
      *
      */
 
-    FtcDashboard dashboard;
+    //FtcDashboard dashboard;
 
     BNO055IMU imu;
     Orientation angles;
@@ -92,8 +92,8 @@ public class Autonomous_TuningPID extends LinearOpMode {
     @Override
     public void runOpMode(){
 
-        dashboard = FtcDashboard.getInstance();
-        Telemetry dashboardTelemetry = dashboard.getTelemetry();
+        //dashboard = FtcDashboard.getInstance();
+        //Telemetry dashboardTelemetry = dashboard.getTelemetry();
 
         left1=hardwareMap.get(DcMotorEx.class,"left1"); //motor 0
         right1=hardwareMap.get(DcMotorEx.class,"right1"); //motor 0
@@ -136,7 +136,7 @@ public class Autonomous_TuningPID extends LinearOpMode {
 
         waitForStart();
         while(opModeIsActive()){
-            print(dashboardTelemetry);
+            print(telemetry);
             telemetry.update();
         }
 
@@ -211,12 +211,12 @@ public class Autonomous_TuningPID extends LinearOpMode {
     }
 
 
-    public void print(Telemetry dashboardTelemetry){
+    public void print(Telemetry Telemetry){
 
-        dashboardTelemetry.addData("Target", target);
-        dashboardTelemetry.addData("PIDCoefficients", DrivetrainPID);
-        dashboardTelemetry.addData("getError", getError());
-        dashboardTelemetry.update();
+        Telemetry.addData("Target", target);
+        Telemetry.addData("PIDCoefficients", DrivetrainPID);
+        Telemetry.addData("getError", getError());
+        Telemetry.update();
 
     }
 
