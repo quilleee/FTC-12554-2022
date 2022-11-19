@@ -55,7 +55,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="ArmTeleop", group="Iterative Opmode")
+@TeleOp(name="Arm_Teleop", group="Iterative Opmode")
 //@Disabled
 public class Arm_Teleop extends LinearOpMode {
 
@@ -67,9 +67,6 @@ public class Arm_Teleop extends LinearOpMode {
     private DcMotor right2 = null;
 
     private DcMotor arm = null;
-
-
-
 
     //Gyro Setup
     BNO055IMU imu;
@@ -158,11 +155,11 @@ public class Arm_Teleop extends LinearOpMode {
     }
 
     private void LiftArm() {
-        arm.setPower(0.5);
+        arm.setPower(1);
     }
 
     private void LowerArm() {
-        arm.setPower(-0.5);
+        arm.setPower(-1);
     }
 
 

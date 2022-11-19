@@ -29,15 +29,12 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -53,9 +50,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="LiftTeleopIStole", group="Iterative Opmode")
+@TeleOp(name="Lift_PIDwLIMIT", group="Iterative Opmode")
 //@Disabled
-public class StolenLift_PID extends LinearOpMode {
+public class Lift_PIDwLIMIT extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor lift = null;

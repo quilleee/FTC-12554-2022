@@ -29,15 +29,12 @@
 
 package org.firstinspires.ftc.teamcode;
 
+//import com.acmerobotics.dashboard.FtcDashboard;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
-import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 /**
  * This file contains an example of an iterative (Non-Linear) "OpMode".
@@ -53,55 +50,75 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
  * Remove or comment out the @Disabled line to add this opmode to the Driver Station OpMode list
  */
 
-@TeleOp(name="LiftTeleopIStole", group="Iterative Opmode")
+@TeleOp(name="FieldCentric_Drive", group="Iterative Opmode")
 //@Disabled
-public class StolenLift_PID extends LinearOpMode {
+public class FieldCentric_Drive extends LinearOpMode {
+
+    //FtcDashboard dashboard;
 
     private ElapsedTime runtime = new ElapsedTime();
-    private DcMotor lift = null;
+
+    private DcMotor left1 = null;
+    private DcMotor right1 = null;
+    private DcMotor left2 = null;
+    private DcMotor right2 = null;
 
     //Other setup
     boolean pressed;
-    public static double kp = 0.02;
-    double modifier = 0.6;
-    int Position1 = 200; //stand in values (not real)
-    int Position2 = 100;
-    int Position3 = 50;
-
-    public static PIDFCoefficients LiftPID = new PIDFCoefficients(25,0.05,1.25,0);
-    PIDFCoefficients currentLiftPID;
 
     @Override
-    public void runOpMode() {
+    public void runOpMode() throws InterruptedException{
+
+        //Drive Train
+        left1 = hardwareMap.get(DcMotor.class, "left1");
+        right1 = hardwareMap.get(DcMotor.class, "right1");
+        left2 = hardwareMap.get(DcMotor.class, "left2");
+        right2 = hardwareMap.get(DcMotor.class, "right2");
+
+        left1.setDirection(DcMotor.Direction.REVERSE); //forward
+        right2.setDirection(DcMotor.Direction.FORWARD); //reverse
+        left2.setDirection(DcMotor.Direction.REVERSE); //forward
+        right1.setDirection(DcMotor.Direction.FORWARD); //reverse
+
+        // Retrieve the IMU from the hardware map
+        BNO055IMU imu = hardwareMap.get(BNO055IMU.class, "imu");
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        // Technically this is the default, however specifying it is clearer
+        parameters.angleUnit = BNO055IMU.AngleUnit.RADIANS;
+        // Without this, data retrieving from the IMU throws an exception
+        imu.initialize(parameters);
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
-        lift = hardwareMap.get(DcMotorEx.class, "lift");
-        lift.setDirection(DcMotor.Direction.FORWARD);
-
-        lift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
         waitForStart();
-        runtime.reset();
+
+        if (isStopRequested()) return;
 
         while (opModeIsActive()) {
 
-            if (gamepad1.left_bumper){
-                moveLift(Position1);
-            } else if (gamepad1.right_bumper){
-                moveLift(Position2);
-            } else if (gamepad1.dpad_left){
-                moveLift(Position3);
-            } else{}
+            //double y = -gamepad1.left_stick_y; // Remember this is reversed!
+            double y = -gamepad1.left_stick_y;
+            double x = gamepad1.left_stick_x * 1.1; //Counteract imperfect strafing
+            double rx = -gamepad1.right_stick_x;
+
+            // Read inverse IMU heading, as the IMU heading is CW positive.
+            double botHeading = -imu.getAngularOrientation().firstAngle;
+
+            double rotX = x * Math.cos(botHeading) - y * Math.sin(botHeading);
+            double rotY = x * Math.sin(botHeading) + y * Math.cos(botHeading);
+
+            double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 0.5);
+            double frontLeftPower = (rotY + rotX + rx) / denominator;
+            double backLeftPower = (rotY - rotX + rx) / denominator;
+            double frontRightPower = (rotY - rotX - rx) / denominator;
+            double backRightPower = (rotY + rotX - rx) / denominator;
+
+            left1.setPower(frontLeftPower);
+            left2.setPower(backLeftPower);
+            right1.setPower(frontRightPower);
+            right2.setPower(backRightPower);
+
 
         }
     }
-
-    public void moveLift(double distance) {
-        lift.setTargetPosition((int) distance);
-        lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        lift.setPower(1);
-    }
-
 }
