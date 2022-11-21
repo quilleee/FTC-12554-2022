@@ -30,57 +30,72 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.view.View;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-//@Config
-@Autonomous(name="Autonomous_PIDStrafe", group="Iterative Opmode")
+@Autonomous(name="Autonomous_MasterPID", group="Iterative Opmode")
 //@Disabled
-public class Autonomous_PIDStrafe extends LinearOpMode {
+public class Autonomous_MasterPID extends LinearOpMode {
 
     /**
-     * ---------------------------- FTC DASHBOARD ------------------------------------
-     * https://acmerobotics.github.io/ftc-dashboard/
-     * To open the dashboard connect your laptop to the robot's wifi and access this address using a browser:
-     * http://192.168.43.1:8080/dash
-     *
+     * Plan
+     * 1. Move intake up
+     * 2. Move arm up (step 1 and 2 could occur simultaneously)
+     * 3. Drive forward to signal sleeve (measure distance in mm ahead of time)
+     * 4. Detect colour
+     * 5. Carry out conditional statement for any of the three locations.
+     * 6. Drive to that location
+     * 7. [Potentially] Lower arm
      */
 
-    //FtcDashboard dashboard;
-
+    // Gyro
     BNO055IMU imu;
     Orientation angles;
 
     // Declare OpMode members.
     private ElapsedTime runtime=new ElapsedTime();
 
-    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(10,0,0,0);
-    // Tuning: >20 is too much
+    // PID
+    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(5,0,0,0);
+    public static int target = 50;
+    double error;
 
-    // Calculating
+    // Calculating how many ticks the encoder makes every millimeter
     static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
     static final double DRIVE_GEAR_REDUCTION = 27.3529; // 5.23^2 (Ratio of gear box 5.23:1)
     static final double WHEEL_DIAMETER_MM = 96; //goBILDA 96mm Mecanum Wheel
-    static final double COUNTS_PER_MM_STRAFE=((COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION)/(WHEEL_DIAMETER_MM*3.1415));
+    static final double COUNTS_PER_MM = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
+                                        (WHEEL_DIAMETER_MM * 3.1415);
 
+    // Drivetrain
     private DcMotorEx left1=null;
     private DcMotorEx right1=null;
     private DcMotorEx left2=null;
     private DcMotorEx right2=null;
 
-    double error;
-    // print error (target - current position)/ counts per inch
+    // Other
+    private DcMotor arm = null;
+    private DcMotor lift = null;
+    Servo intake;
+    ColorSensor sensorColor;
+
+    float hsvValues[] = {0F, 0F, 0F};
+    final float values[] = hsvValues;
+    final double SCALE_FACTOR = 255;
 
     @Override
     public void runOpMode(){
@@ -88,9 +103,9 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         //dashboard = FtcDashboard.getInstance();
         //Telemetry dashboardTelemetry = dashboard.getTelemetry();
 
-        left1=hardwareMap.get(DcMotorEx.class,"left1"); //motor 0
-        right1=hardwareMap.get(DcMotorEx.class,"right1"); //motor 0
-        left2=hardwareMap.get(DcMotorEx.class,"left2"); //motor 0
+        left1=hardwareMap.get(DcMotorEx.class,"left1");
+        right1=hardwareMap.get(DcMotorEx.class,"right1");
+        left2=hardwareMap.get(DcMotorEx.class,"left2");
         right2=hardwareMap.get(DcMotorEx.class,"right2");
 
         left1.setDirection(DcMotor.Direction.FORWARD);
@@ -129,26 +144,45 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         waitForStart();
 
-        gyroStrafe(0.8, 500);
+        gyroDrive(0.8, 500);
 
         while(opModeIsActive()){
 
-            print((int)(0.8 * COUNTS_PER_MM_STRAFE), telemetry);
+            //convert RGB values to HSV
+            //multiply by the scale factor
+            // then cast it back into int (Scale factor is a double)
+            Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
+                    (int) (sensorColor.green() * SCALE_FACTOR),
+                    (int) (sensorColor.blue() * SCALE_FACTOR),
+                    hsvValues);
+
+            // Movement telemetry
+            print((int)(0.8 * COUNTS_PER_MM), telemetry);
+
+            // Colour conditional
+
+            if (hsvValues[0] < 240 && hsvValues[0] > 160) { //purple: Location 1
+                telemetry.addLine("purple");
+            } else if (hsvValues[0] < 65 && hsvValues[0] > 20){ //orange: Location 2
+                telemetry.addLine("orange");
+            } else if (hsvValues[0] < 130 && hsvValues[0] > 100){ //green: Location 3
+                telemetry.addLine("green");
+            } else{
+                telemetry.addLine("other");
+            }
 
         }
     }
 
-    public void gyroStrafe(double maxSpeed, double distance){
+    public void gyroDrive(double maxSpeed, double distance){
 
         resetEncoders();
 
-        double StrafeConstant = 1;
-
-        int target =(int)(distance * COUNTS_PER_MM_STRAFE * StrafeConstant);
+        int target =(int)(distance * COUNTS_PER_MM);
 
         left1.setTargetPosition(target);
-        left2.setTargetPosition(-target);
-        right1.setTargetPosition(-target);
+        left2.setTargetPosition(target);
+        right1.setTargetPosition(target);
         right2.setTargetPosition(target);
 
         left1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -161,12 +195,13 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
             // add telemetry
 
+            double leftPower = maxSpeed; // change power based off angle error
+            double rightPower = maxSpeed;
 
-
-            left1.setPower(maxSpeed);
-            left2.setPower(maxSpeed);
-            right1.setPower(maxSpeed);
-            right2.setPower(maxSpeed);
+            left1.setPower(leftPower);
+            left2.setPower(leftPower);
+            right1.setPower(rightPower);
+            right2.setPower(rightPower);
 
             error = target - getCurrentPosition();
 
@@ -198,13 +233,12 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
     }
 
-
     public void print(double target,Telemetry telemetry){
 
-        double dist = getCurrentPosition()/COUNTS_PER_MM_STRAFE;
+        double dist = getCurrentPosition()/COUNTS_PER_MM;
 
         telemetry.addData("Distance", dist);
-        telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM_STRAFE);
+        telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM);
 
         telemetry.update();
     }
