@@ -42,6 +42,9 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 //@Config
@@ -65,8 +68,25 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     // Declare OpMode members.
     private ElapsedTime runtime=new ElapsedTime();
 
-    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(10,0,0,0);
+    // Gyro for strafe
+    // p controller with gyro
+    // depends on whether left or right (boolean)
+    // distance var
+    // Find strafe constant
+    // set target pos based off boolean
+    // error is target - imu
+    // order is xzy
+    // acceleration speed = speed + x
+    // gyro p = y * error * kp
+    // boolean affects: front neg, back pos
+    // speed capped at 0.5 for autonomous
+
+    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(12,0,0,0);
     // Tuning: >20 is too much
+    // p-15, error-0.78 (799)
+    // p-12, error-
+
+    // 1 tile: 596.9 millimeters
 
     // Calculating
     static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
@@ -100,9 +120,6 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         resetEncoders();
 
-        telemetry.addData(">","Robot Ready.");    //
-        telemetry.update();
-
         left1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         left2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
@@ -127,18 +144,20 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         imu=hardwareMap.get(BNO055IMU.class,"imu");
         imu.initialize(parameters);
 
+        telemetry.addData(">","Robot Ready.");    //
+        telemetry.update();
         waitForStart();
 
-        gyroStrafe(0.8, 500);
+        gyroStrafe(0.7, true, 2000);
 
         while(opModeIsActive()){
 
-            print((int)(0.8 * COUNTS_PER_MM_STRAFE), telemetry);
+            print((int)(0.7 * COUNTS_PER_MM_STRAFE), telemetry);
 
         }
     }
 
-    public void gyroStrafe(double maxSpeed, double distance){
+    public void gyroStrafe(double maxSpeed, boolean isleft, double distance){
 
         resetEncoders();
 
@@ -146,27 +165,64 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         int target =(int)(distance * COUNTS_PER_MM_STRAFE * StrafeConstant);
 
-        left1.setTargetPosition(target);
-        left2.setTargetPosition(-target);
-        right1.setTargetPosition(-target);
-        right2.setTargetPosition(target);
+        if (isleft) {
+            left1.setTargetPosition(-target);
+            left2.setTargetPosition(target);
+            right1.setTargetPosition(target);
+            right2.setTargetPosition(-target);
+        } else {
+            left1.setTargetPosition(target);
+            left2.setTargetPosition(-target);
+            right1.setTargetPosition(-target);
+            right2.setTargetPosition(target);
+        }
 
         left1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         left2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
+        double p;
+        double kP = 0.4;
+        // 0.3:8
+        // 0.4:
+        // 0.5:
+        double y = 0.2;
+
+
         //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
 
         while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
             // add telemetry
 
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
+            double AngleError = 0 - angles.firstAngle;
+            p = AngleError * kP * y;
+
+            if ( maxSpeed > 0.7) {
+                maxSpeed = 0.7;
+            } else {
+
+            }
+
+            if (kP > 0.3) {
+                kP = 0.3;
+            } else {
+
+            }
 
 
-            left1.setPower(maxSpeed);
-            left2.setPower(maxSpeed);
-            right1.setPower(maxSpeed);
-            right2.setPower(maxSpeed);
+            if (isleft) {
+                left1.setPower(maxSpeed + p);
+                left2.setPower(maxSpeed - p);
+                right1.setPower(maxSpeed + p);
+                right2.setPower(maxSpeed - p);
+            } else {
+                left1.setPower(maxSpeed - p);
+                left2.setPower(maxSpeed + p);
+                right1.setPower(maxSpeed - p);
+                right2.setPower(maxSpeed + p);
+            }
 
             error = target - getCurrentPosition();
 
@@ -205,6 +261,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         telemetry.addData("Distance", dist);
         telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM_STRAFE);
+        telemetry.addData("ErrorAngle", angles.firstAngle);
 
         telemetry.update();
     }

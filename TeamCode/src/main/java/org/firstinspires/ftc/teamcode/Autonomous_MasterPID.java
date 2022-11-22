@@ -73,6 +73,8 @@ public class Autonomous_MasterPID extends LinearOpMode {
     public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(5,0,0,0);
     public static int target = 50;
     double error;
+    // p:10, dist:493
+    // p:5, dist: 495
 
     // Calculating how many ticks the encoder makes every millimeter
     static final double COUNTS_PER_MOTOR_REV = 28; // HD Hex Motor REV-41-1291
