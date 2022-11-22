@@ -1,41 +1,15 @@
-/* Copyright (c) 2017 FIRST. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this list
- * of conditions and the following disclaimer.
- *
- * Redistributions in binary form must reproduce the above copyright notice, this
- * list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * Neither the name of FIRST nor the names of its contributors may be used to endorse or
- * promote products derived from this software without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
- * LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 
 package org.firstinspires.ftc.teamcode;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.view.View;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
@@ -81,7 +55,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     // boolean affects: front neg, back pos
     // speed capped at 0.5 for autonomous
 
-    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(12,0,0,0);
+    public static PIDFCoefficients DrivetrainPID=new PIDFCoefficients(12,0,1.2,0);
     // Tuning: >20 is too much
     // p-15, error-0.78 (799)
     // p-12, error-
@@ -93,11 +67,19 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     static final double DRIVE_GEAR_REDUCTION = 27.3529; // 5.23^2 (Ratio of gear box 5.23:1)
     static final double WHEEL_DIAMETER_MM = 96; //goBILDA 96mm Mecanum Wheel
     static final double COUNTS_PER_MM_STRAFE=((COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION)/(WHEEL_DIAMETER_MM*3.1415));
+    static final double COUNTS_PER_MM = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
+            (WHEEL_DIAMETER_MM * 3.1415);
 
     private DcMotorEx left1=null;
     private DcMotorEx right1=null;
     private DcMotorEx left2=null;
     private DcMotorEx right2=null;
+
+    ColorSensor sensorColor;
+
+    float hsvValues[] = {0F, 0F, 0F};
+    final float values[] = hsvValues;
+    final double SCALE_FACTOR = 255;
 
     double error;
     // print error (target - current position)/ counts per inch
@@ -113,25 +95,30 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         left2=hardwareMap.get(DcMotorEx.class,"left2"); //motor 0
         right2=hardwareMap.get(DcMotorEx.class,"right2");
 
+        sensorColor = hardwareMap.get(ColorSensor.class, "colourSensor");
+
+
         left1.setDirection(DcMotor.Direction.FORWARD);
         right1.setDirection(DcMotor.Direction.REVERSE);
         left2.setDirection(DcMotor.Direction.FORWARD);
         right2.setDirection(DcMotor.Direction.REVERSE);
-
-        resetEncoders();
 
         left1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         left2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
+        left1.setTargetPositionTolerance(15);
+        left2.setTargetPositionTolerance(15);
+        right1.setTargetPositionTolerance(15);
+        right2.setTargetPositionTolerance(15);
+
+
         left1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         left2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
 
-        int relativeLayoutId=hardwareMap.appContext.getResources().getIdentifier("RelativeLayout","id",hardwareMap.appContext.getPackageName());
-        final View relativeLayout=((Activity)hardwareMap.appContext).findViewById(relativeLayoutId);
 
         BNO055IMU.Parameters parameters=new BNO055IMU.Parameters();
         parameters.angleUnit=BNO055IMU.AngleUnit.DEGREES;
@@ -148,14 +135,70 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         telemetry.update();
         waitForStart();
 
-        gyroStrafe(0.7, true, 2000);
+        gyroDrive(0.6, 590);
+        runtime.reset();
+        detectColour();
+
 
         while(opModeIsActive()){
 
-            print((int)(0.7 * COUNTS_PER_MM_STRAFE), telemetry);
+            print((int)(0.6 * COUNTS_PER_MM_STRAFE));
+
+
 
         }
     }
+
+    public void gyroDrive(double maxSpeed, double distance){
+
+        resetEncoders();
+
+        int target =(int)(distance * COUNTS_PER_MM);
+
+        left1.setTargetPosition(target);
+        left2.setTargetPosition(target);
+        right1.setTargetPosition(target);
+        right2.setTargetPosition(target);
+
+        left1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        left2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        right1.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        double p;
+        double kP = 0.1;
+        double y = 0.5;
+        double ramp = 0;
+
+        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
+            // add telemetry
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
+
+            ramp += 0.05;
+
+            if (ramp > 1 ) {
+                ramp = 1;
+            }
+
+            angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
+            double AngleError = 0 - angles.firstAngle;
+            p = AngleError * kP * y;
+
+            left1.setPower((maxSpeed - p) * ramp);
+            left2.setPower((maxSpeed - p) * ramp);
+            right1.setPower((maxSpeed + p) * ramp);
+            right2.setPower((maxSpeed + p) * ramp);
+
+            error = target - getCurrentPosition();
+
+            print(target);
+
+
+        }
+        stopMotors();
+
+    }
+
 
     public void gyroStrafe(double maxSpeed, boolean isleft, double distance){
 
@@ -183,53 +226,58 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         double p;
-        double kP = 0.4;
-        // 0.3:8
-        // 0.4:
-        // 0.5:
-        double y = 0.2;
+        double kP = 0.1;
+        // 0.05: 3.9
+        // 0.1: -9.7 / 4.6
+        // 0.2: -9.2/ 4.8
+        // 0.3: / 4.8
+        // 0.4: -8.9/ 5.5
+        // 0.5: -8.8/ 6.2
+        // 0.6: -9.5
+        double y = 0.5;
+        // 5.18
+        // 1- 4.57
 
+        double ramp = 0;
 
-        //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
+      //https://fll-pigeons.github.io/gamechangers/gyro_pid.html (uhhh this helps)
 
-        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy()  && right2.isBusy()){
+        while (opModeIsActive() && left1.isBusy() && left2.isBusy() && right1.isBusy() && right2.isBusy()){
             // add telemetry
 
+            ramp += 0.05;
+
+            if (ramp > 1 ) {
+                ramp = 1;
+            }
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
             double AngleError = 0 - angles.firstAngle;
             p = AngleError * kP * y;
 
-            if ( maxSpeed > 0.7) {
-                maxSpeed = 0.7;
-            } else {
-
+            if ( maxSpeed > 0.6) {
+                maxSpeed = 0.6;
             }
-
-            if (kP > 0.3) {
-                kP = 0.3;
-            } else {
-
-            }
-
 
             if (isleft) {
-                left1.setPower(maxSpeed + p);
-                left2.setPower(maxSpeed - p);
-                right1.setPower(maxSpeed + p);
-                right2.setPower(maxSpeed - p);
+                left1.setPower((maxSpeed + p)*ramp);
+                left2.setPower((maxSpeed - p)*ramp);
+                right1.setPower((maxSpeed + p)*ramp);
+                right2.setPower((maxSpeed - p)*ramp);
             } else {
-                left1.setPower(maxSpeed - p);
-                left2.setPower(maxSpeed + p);
-                right1.setPower(maxSpeed - p);
-                right2.setPower(maxSpeed + p);
+                left1.setPower((maxSpeed - p)*ramp);
+                left2.setPower((maxSpeed + p)*ramp);
+                right1.setPower((maxSpeed - p)*ramp);
+                right2.setPower((maxSpeed + p)*ramp);
             }
 
             error = target - getCurrentPosition();
 
-            print(target, telemetry);
+            print(target);
+
 
 
         }
+
         stopMotors();
 
     }
@@ -248,22 +296,47 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     public void stopMotors(){
 
         left1.setPower(0);
-        left2.setPower(0);
         right1.setPower(0);
+        left2.setPower(0);
         right2.setPower(0);
 
     }
 
 
-    public void print(double target,Telemetry telemetry){
+    public void print(double target){
 
         double dist = getCurrentPosition()/COUNTS_PER_MM_STRAFE;
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
 
         telemetry.addData("Distance", dist);
         telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM_STRAFE);
         telemetry.addData("ErrorAngle", angles.firstAngle);
 
         telemetry.update();
+    }
+
+    public void detectColour(){
+        // use timer
+        // while
+        while (getRuntime() < 1 ){
+            Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
+                    (int) (sensorColor.green() * SCALE_FACTOR),
+                    (int) (sensorColor.blue() * SCALE_FACTOR),
+                    hsvValues);
+
+            if (hsvValues[0] < 240 && hsvValues[0] > 160) { //purple
+                telemetry.addLine("purple");
+            } else if (hsvValues[0] < 65 && hsvValues[0] > 20){ //orange
+                telemetry.addLine("orange");
+            } else if (hsvValues[0] < 120 && hsvValues[0] > 100){ //green
+                telemetry.addLine("green");
+            } else{
+                telemetry.addLine("other");
+            }
+
+            telemetry.update();
+        }
+
     }
 
 
