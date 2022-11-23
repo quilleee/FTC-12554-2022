@@ -82,6 +82,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     final double SCALE_FACTOR = 255;
 
     double error;
+    int location;
     // print error (target - current position)/ counts per inch
 
     @Override
@@ -315,7 +316,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         telemetry.update();
     }
 
-    public void detectColour(){
+    public int detectColour(){
         // use timer
         // while
         while (getRuntime() < 1 ){
@@ -325,17 +326,23 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
                     hsvValues);
 
             if (hsvValues[0] < 240 && hsvValues[0] > 160) { //purple
+                location = 1;
                 telemetry.addLine("purple");
             } else if (hsvValues[0] < 65 && hsvValues[0] > 20){ //orange
+                location = 2;
                 telemetry.addLine("orange");
             } else if (hsvValues[0] < 120 && hsvValues[0] > 100){ //green
+                location = 3;
                 telemetry.addLine("green");
             } else{
                 telemetry.addLine("other");
             }
 
             telemetry.update();
+
         }
+
+        return location;
 
     }
 

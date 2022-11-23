@@ -142,7 +142,7 @@ public class Teleop12554 extends LinearOpMode {
             double backRightPower = (rotY + rotX - rx) / denominator;
 
 
-            if (gamepad1.x){
+            if (gamepad1.y){
                 getHeading();
                 resetHeading();
             }
@@ -209,9 +209,9 @@ public class Teleop12554 extends LinearOpMode {
             }
             arm.setPower(0.6);
 
-            if(gamepad1.a){
-                claw.setPosition(0.88); //0.88
-            } else if(gamepad1.y){
+            if(gamepad1.left_bumper){
+                claw.setPosition(0.95); //0.88
+            } else if(gamepad1.right_bumper){
                 claw.setPosition(0.65);
             }
 
