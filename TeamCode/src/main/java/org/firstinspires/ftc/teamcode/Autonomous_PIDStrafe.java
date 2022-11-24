@@ -133,8 +133,9 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         telemetry.update();
         waitForStart();
 
-        gyroDrive(0.6, 590);
+        gyroDrive(0.6, 550);
         detectColour();
+        goToLocation(location);
 
 
         while(opModeIsActive()){
@@ -276,6 +277,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         }
 
         stopMotors();
+        telemetry.addLine("Reached position");
 
     }
 
@@ -317,8 +319,8 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         telemetry.addLine("Detecting colour...");
         // use timer
         // while
-        resetRuntime();
-        while (runtime.time() < 1 ){
+        runtime.reset();
+        while (runtime.time() < 2 ){
             Color.RGBToHSV((int) (sensorColor.red() * SCALE_FACTOR),
                     (int) (sensorColor.green() * SCALE_FACTOR),
                     (int) (sensorColor.blue() * SCALE_FACTOR),
@@ -349,6 +351,23 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         return location;
 
+    }
+
+    public void goToLocation(int location){
+
+        gyroDrive(0.6, 660);
+
+        if (location == 1){
+            gyroStrafe(0.6,true,600);
+            telemetry.addLine("Location 1: move left");
+        } else if (location == 2){
+            telemetry.addLine("Location 2: hold");
+        } else if (location == 3){
+            gyroStrafe(0.6, false,600);
+            telemetry.addLine("Location 3: move right");
+        }
+
+        telemetry.update();
     }
 
 
