@@ -10,7 +10,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -19,9 +21,9 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
 //@Config
-@Autonomous(name="Autonomous_PIDStrafe", group="Iterative Opmode")
+@Autonomous(name="Autonomous_PIDMovement", group="Iterative Opmode")
 //@Disabled
-public class Autonomous_PIDStrafe extends LinearOpMode {
+public class Autonomous_PIDMovement extends LinearOpMode {
 
     /**
      * ---------------------------- FTC DASHBOARD ------------------------------------
@@ -56,6 +58,9 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     // Tuning: >20 is too much
     // p-15, error-0.78 (799)
     // p-12, error-
+    // 0.5, 3
+    // d-1.2, 3
+    // d-1.8, 4
 
     // 1 tile: 596.9 millimeters
 
@@ -82,6 +87,25 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
     int location;
     // print error (target - current position)/ counts per inch
 
+    // Other parts
+    private DcMotorEx lift = null;
+    DigitalChannel liftLimit;
+    private DcMotor arm = null;
+    DigitalChannel armLimit;
+    Servo claw;
+
+    // Lift PID
+    int Position1 = 0;
+    int Position2 = 710;
+    int Position3 = 2000;
+
+    public static PIDFCoefficients LiftPID = new PIDFCoefficients(10,0.49988,0,0); //10, 0.049988, 0, 0 | 23,0,0,0
+
+    // Arm
+    int maxArmPosition = -910;
+    int minArmPosition = 0;
+
+
     @Override
     public void runOpMode(){
 
@@ -95,7 +119,34 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         sensorColor = hardwareMap.get(ColorSensor.class, "colourSensor");
 
+        // Arm
+        arm = hardwareMap.get(DcMotorEx.class, "arm");
+        arm.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        arm.setDirection(DcMotorEx.Direction.FORWARD);
 
+        armLimit = hardwareMap.get(DigitalChannel.class, "armLimit");
+        armLimit.setMode(DigitalChannel.Mode.INPUT);
+
+        // Lift
+        lift = (DcMotorEx)hardwareMap.get(DcMotorEx.class,"lift");
+
+        liftLimit = hardwareMap.get(DigitalChannel.class,"liftLimit");
+
+        lift.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        lift.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        // DrivetrainPID is the PID Coefficients set to new values above.
+        lift.setDirection(DcMotorEx.Direction.FORWARD);
+
+        liftLimit = hardwareMap.get(DigitalChannel.class, "liftLimit");
+        liftLimit.setMode(DigitalChannel.Mode.INPUT);
+
+        lift.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER,LiftPID); //10,0.049988,0,0
+
+
+        // Other
+        claw = hardwareMap.get(Servo.class,"claw");
+
+        // Drivetrain
         left1.setDirection(DcMotor.Direction.FORWARD);
         right1.setDirection(DcMotor.Direction.REVERSE);
         left2.setDirection(DcMotor.Direction.FORWARD);
@@ -106,17 +157,15 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         right1.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         right2.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
-        left1.setTargetPositionTolerance(15);
-        left2.setTargetPositionTolerance(15);
-        right1.setTargetPositionTolerance(15);
-        right2.setTargetPositionTolerance(15);
-
+        //left1.setTargetPositionTolerance(20);
+        //left2.setTargetPositionTolerance(20);
+        //right1.setTargetPositionTolerance(20);
+        //,.right2.setTargetPositionTolerance(20);
 
         left1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         left2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
         right2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DrivetrainPID);
-
 
         BNO055IMU.Parameters parameters=new BNO055IMU.Parameters();
         parameters.angleUnit=BNO055IMU.AngleUnit.DEGREES;
@@ -129,12 +178,23 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         imu=hardwareMap.get(BNO055IMU.class,"imu");
         imu.initialize(parameters);
 
-        telemetry.addData(">","Robot Ready.");
-        telemetry.update();
+        //telemetry.addData(">","Robot Ready.");    //
+        //telemetry.update();
         waitForStart();
 
-        gyroDrive(0.6, 590);
-        detectColour();
+        // Lower intake (no)
+        // Lift arm and lift??
+        // Raise intake (no)
+        // Move to cone
+        // Move to end
+        // Strafe
+        // Raise lift
+        // open claw
+        //detectColour();
+        //raiseLift(Position1);
+
+        gyroStrafe(0.6,false,600);
+        strafeCorrection(false);
 
 
         while(opModeIsActive()){
@@ -145,6 +205,21 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
         }
     }
+
+    public void raiseLift(int liftPosition){
+
+        lift.setTargetPosition(liftPosition);
+        lift.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+    }
+
+    public void raiseArm(int armPosition){
+
+        arm.setTargetPosition(armPosition);
+        arm.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        telemetry.addData("arm position", arm.getCurrentPosition());
+    }
+
 
     public void gyroDrive(double maxSpeed, double distance){
 
@@ -171,7 +246,8 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
             // add telemetry
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
 
-            ramp += 0.05;
+            ramp += 0.2;
+
 
             if (ramp > 1 ) {
                 ramp = 1;
@@ -223,7 +299,7 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         right2.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         double p;
-        double kP = 0.1;
+        double kP = 0.2;
         // 0.05: 3.9
         // 0.1: -9.7 / 4.6
         // 0.2: -9.2/ 4.8
@@ -274,10 +350,50 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
 
 
         }
+        telemetry.update();
 
         stopMotors();
 
     }
+
+    public void strafeCorrection(boolean isLeft){
+
+        resetEncoders();
+        resetRuntime();
+
+        double p;
+        double P = 0.2;
+        double turnSpeed = 0.6;
+
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
+        double AngleError = 0 - angles.firstAngle;
+        p = AngleError * P;
+
+        while (angles.firstAngle > 2) {
+
+            while (runtime.time() < 3) {
+
+                if (isLeft){
+
+                    left1.setPower(turnSpeed * p);
+                    left2.setPower(turnSpeed * p);
+                    right1.setPower(-turnSpeed * p);
+                    right2.setPower(-turnSpeed * p);
+
+                } else {
+
+                    left1.setPower(-turnSpeed * p);
+                    left2.setPower(-turnSpeed * p);
+                    right1.setPower(turnSpeed * p);
+                    right2.setPower(turnSpeed * p);
+
+                }
+
+            }
+
+        }
+
+        }
 
     public void resetEncoders(){
         left1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -305,16 +421,14 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
         double dist = getCurrentPosition()/COUNTS_PER_MM_STRAFE;
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC,AxesOrder.ZXY,AngleUnit.DEGREES);
 
-        //telemetry.addData("Distance", dist);
-        //telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM_STRAFE);
-        //telemetry.addData("ErrorAngle", angles.firstAngle);
+        telemetry.addData("Distance", dist);
+        telemetry.addData("Error", (target- getCurrentPosition())/COUNTS_PER_MM_STRAFE);
+        telemetry.addData("ErrorAngle", angles.firstAngle);
 
-        //telemetry.update();
+        telemetry.update();
     }
 
     public int detectColour(){
-
-        telemetry.addLine("Detecting colour...");
         // use timer
         // while
         resetRuntime();
@@ -324,24 +438,18 @@ public class Autonomous_PIDStrafe extends LinearOpMode {
                     (int) (sensorColor.blue() * SCALE_FACTOR),
                     hsvValues);
 
-            if (hsvValues[2] > 150){
-                if (hsvValues[0] < 40 || hsvValues[0] > 320) { //pink
-                    location = 1;
-                    telemetry.addLine("pink");
-                } else if (hsvValues[0] < 180 && hsvValues[0] > 140){ //green
-                    location = 2;
-                    telemetry.addLine("green");
-                } else if (hsvValues[0] < 130 && hsvValues[0] > 70){ //yellow
-                    location = 3;
-                    telemetry.addLine("yellow");
-                } else{
-                    telemetry.addLine("other");
-                }
-            } else {
-                telemetry.addLine("No colours detected");
+            if (hsvValues[0] < 240 && hsvValues[0] > 160) { //purple
+                location = 1;
+                telemetry.addLine("purple");
+            } else if (hsvValues[0] < 65 && hsvValues[0] > 20){ //orange
+                location = 2;
+                telemetry.addLine("orange");
+            } else if (hsvValues[0] < 120 && hsvValues[0] > 100){ //green
+                location = 3;
+                telemetry.addLine("green");
+            } else{
+                telemetry.addLine("other");
             }
-
-
 
             telemetry.update();
 
